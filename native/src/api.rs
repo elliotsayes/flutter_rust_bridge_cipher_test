@@ -4,6 +4,11 @@
 
 use flutter_rust_bridge::StreamSink;
 
+use aes_gcm::{
+    aead::stream::{self, Encryptor, EncryptorBE32, NonceSize, Nonce},
+    Aes256Gcm, KeyInit, AesGcm
+};
+
 // A plain enum without any fields. This is similar to Dart- or C-style enums.
 // flutter_rust_bridge is capable of generating code for enums with fields
 // (@freezed classes in Dart and tagged unions in C).
@@ -60,21 +65,55 @@ pub fn rust_release_mode() -> bool {
     cfg!(not(debug_assertions))
 }
 
-static mut STREAM_SINK: Option<StreamSink<Vec<u8>>> = None;
+struct EncryptionState {
+    // key: Vec<u8>,
+    // iv: Vec<u8>,
+    chunk_size: u32,
+    buffer: Vec<u8>,
+    // aead: AesGcm<Aes256Gcm, U12>,
+    encryption_stream: EncryptorBE32<Aes256Gcm>,
+    sink_stream: StreamSink<Vec<u8>>,
+}
 
-pub fn create_stream(stream: StreamSink<Vec<u8>>) -> anyhow::Result<()> {
+static mut ENCRYPTION_STATE : Option<EncryptionState> = None;
+
+pub fn create_stream(key: Vec<u8>, iv: Vec<u8>, chunk_size: u32, sink_stream: StreamSink<Vec<u8>>) -> anyhow::Result<()> {
+    let aead = Aes256Gcm::new_from_slice(&key).unwrap();
+    
+    let iv_slice = iv.as_slice();
+    let encryption_stream = stream::EncryptorBE32::from_aead(aead, iv_slice.into());
+
     unsafe {
-        STREAM_SINK = Some(stream);
+        ENCRYPTION_STATE = Some(EncryptionState {
+            // key,
+            // iv,
+            chunk_size,
+            buffer: vec![0; 8],
+            // aead,
+            encryption_stream,
+            sink_stream,
+        });
     }
+
     Ok(())
 }
 
 pub fn process_data(data: Vec<u8>) -> anyhow::Result<()> {
     unsafe {
-        match STREAM_SINK.as_ref() {
-            Some(stream) => {
-                // just return it back to Dart
-                stream.add(data);
+        match ENCRYPTION_STATE.as_mut() {
+            Some(es) => {
+                if data.len() as u32 == es.chunk_size {
+                    let encrypted_buffer = es.encryption_stream
+                        .encrypt_next(es.buffer.as_slice())
+                        .map_err(|err| anyhow::anyhow!("Encrypting large file: {}", err))?;
+                    es.sink_stream.add(encrypted_buffer);
+                } else {
+                    // let encrypted_buffer = es.encryption_stream
+                    //     .encrypt_last(es.buffer.as_slice())
+                    //     .map_err(|err| anyhow::anyhow!("Encrypting large file: {}", err))?;
+                    // es.sink_stream.add(encrypted_buffer);
+                    es.sink_stream.close();
+                }
                 Ok(())
             }
             None => {
@@ -91,10 +130,10 @@ mod tests {
 
     #[test]
     fn test_create_process() {
-        unsafe { assert!(STREAM_SINK.is_none()); }
+        unsafe { assert!(ENCRYPTION_STATE.is_none()); }
         
-        let x_res = create_stream(StreamSink::new(Rust2Dart::new(12)));
-        unsafe { assert!(STREAM_SINK.is_some()); }
+        let x_res = create_stream(vec![0; 32], vec![0; 7], 1024, StreamSink::new(Rust2Dart::new(12)));
+        unsafe { assert!(ENCRYPTION_STATE.is_some()); }
         assert!(x_res.is_ok());
 
         let y_res = process_data(vec![1,2,3]);

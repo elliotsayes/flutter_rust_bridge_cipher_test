@@ -12,8 +12,8 @@ pub fn wire_rust_release_mode(port_: MessagePort) {
 }
 
 #[wasm_bindgen]
-pub fn wire_create_stream(port_: MessagePort) {
-    wire_create_stream_impl(port_)
+pub fn wire_create_stream(port_: MessagePort, key: Box<[u8]>, iv: Box<[u8]>, chunk_size: u32) {
+    wire_create_stream_impl(port_, key, iv, chunk_size)
 }
 
 #[wasm_bindgen]
@@ -34,6 +34,11 @@ impl Wire2Api<Vec<u8>> for Box<[u8]> {
 }
 // Section: impl Wire2Api for JsValue
 
+impl Wire2Api<u32> for JsValue {
+    fn wire2api(self) -> u32 {
+        self.unchecked_into_f64() as _
+    }
+}
 impl Wire2Api<u8> for JsValue {
     fn wire2api(self) -> u8 {
         self.unchecked_into_f64() as _

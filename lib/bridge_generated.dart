@@ -51,12 +51,20 @@ class NativeImpl implements Native {
         argNames: [],
       );
 
-  Stream<Uint8List> createStream({dynamic hint}) {
+  Stream<Uint8List> createStream(
+      {required Uint8List key,
+      required Uint8List iv,
+      required int chunkSize,
+      dynamic hint}) {
+    var arg0 = _platform.api2wire_uint_8_list(key);
+    var arg1 = _platform.api2wire_uint_8_list(iv);
+    var arg2 = api2wire_u32(chunkSize);
     return _platform.executeStream(FlutterRustBridgeTask(
-      callFfi: (port_) => _platform.inner.wire_create_stream(port_),
+      callFfi: (port_) =>
+          _platform.inner.wire_create_stream(port_, arg0, arg1, arg2),
       parseSuccessData: _wire2api_uint_8_list,
       constMeta: kCreateStreamConstMeta,
-      argValues: [],
+      argValues: [key, iv, chunkSize],
       hint: hint,
     ));
   }
@@ -64,7 +72,7 @@ class NativeImpl implements Native {
   FlutterRustBridgeTaskConstMeta get kCreateStreamConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "create_stream",
-        argNames: [],
+        argNames: ["key", "iv", "chunkSize"],
       );
 
   Future<void> processData({required Uint8List data, dynamic hint}) {
@@ -115,6 +123,11 @@ class NativeImpl implements Native {
 }
 
 // Section: api2wire
+
+@protected
+int api2wire_u32(int raw) {
+  return raw;
+}
 
 @protected
 int api2wire_u8(int raw) {

@@ -12,8 +12,13 @@ pub extern "C" fn wire_rust_release_mode(port_: i64) {
 }
 
 #[no_mangle]
-pub extern "C" fn wire_create_stream(port_: i64) {
-    wire_create_stream_impl(port_)
+pub extern "C" fn wire_create_stream(
+    port_: i64,
+    key: *mut wire_uint_8_list,
+    iv: *mut wire_uint_8_list,
+    chunk_size: u32,
+) {
+    wire_create_stream_impl(port_, key, iv, chunk_size)
 }
 
 #[no_mangle]

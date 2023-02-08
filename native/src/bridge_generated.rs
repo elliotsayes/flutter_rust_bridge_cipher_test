@@ -41,14 +41,26 @@ fn wire_rust_release_mode_impl(port_: MessagePort) {
         move || move |task_callback| Ok(rust_release_mode()),
     )
 }
-fn wire_create_stream_impl(port_: MessagePort) {
+fn wire_create_stream_impl(
+    port_: MessagePort,
+    key: impl Wire2Api<Vec<u8>> + UnwindSafe,
+    iv: impl Wire2Api<Vec<u8>> + UnwindSafe,
+    chunk_size: impl Wire2Api<u32> + UnwindSafe,
+) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "create_stream",
             port: Some(port_),
             mode: FfiCallMode::Stream,
         },
-        move || move |task_callback| create_stream(task_callback.stream_sink()),
+        move || {
+            let api_key = key.wire2api();
+            let api_iv = iv.wire2api();
+            let api_chunk_size = chunk_size.wire2api();
+            move |task_callback| {
+                create_stream(api_key, api_iv, api_chunk_size, task_callback.stream_sink())
+            }
+        },
     )
 }
 fn wire_process_data_impl(port_: MessagePort, data: impl Wire2Api<Vec<u8>> + UnwindSafe) {
@@ -84,6 +96,11 @@ where
 {
     fn wire2api(self) -> Option<T> {
         (!self.is_null()).then(|| self.wire2api())
+    }
+}
+impl Wire2Api<u32> for u32 {
+    fn wire2api(self) -> u32 {
+        self
     }
 }
 impl Wire2Api<u8> for u8 {

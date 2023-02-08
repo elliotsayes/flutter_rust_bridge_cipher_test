@@ -18,7 +18,11 @@ abstract class Native {
 
   FlutterRustBridgeTaskConstMeta get kRustReleaseModeConstMeta;
 
-  Stream<Uint8List> createStream({dynamic hint});
+  Stream<Uint8List> createStream(
+      {required Uint8List key,
+      required Uint8List iv,
+      required int chunkSize,
+      dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kCreateStreamConstMeta;
 

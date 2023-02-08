@@ -40,7 +40,8 @@ class NativeWasmModule implements WasmModule {
 
   external dynamic /* void */ wire_rust_release_mode(NativePortType port_);
 
-  external dynamic /* void */ wire_create_stream(NativePortType port_);
+  external dynamic /* void */ wire_create_stream(
+      NativePortType port_, Uint8List key, Uint8List iv, int chunk_size);
 
   external dynamic /* void */ wire_process_data(
       NativePortType port_, Uint8List data);
@@ -57,8 +58,9 @@ class NativeWire extends FlutterRustBridgeWasmWireBase<NativeWasmModule> {
   void wire_rust_release_mode(NativePortType port_) =>
       wasmModule.wire_rust_release_mode(port_);
 
-  void wire_create_stream(NativePortType port_) =>
-      wasmModule.wire_create_stream(port_);
+  void wire_create_stream(
+          NativePortType port_, Uint8List key, Uint8List iv, int chunk_size) =>
+      wasmModule.wire_create_stream(port_, key, iv, chunk_size);
 
   void wire_process_data(NativePortType port_, Uint8List data) =>
       wasmModule.wire_process_data(port_, data);
