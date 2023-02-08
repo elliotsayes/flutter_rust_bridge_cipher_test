@@ -5,8 +5,6 @@ gen:
     flutter_rust_bridge_codegen \
         --rust-input native/src/api.rs \
         --dart-output lib/bridge_generated.dart \
-        --c-output ios/Runner/bridge_generated.h \
-        --c-output macos/Runner/bridge_generated.h \
         --dart-decl-output lib/bridge_definitions.dart \
         --wasm
 
