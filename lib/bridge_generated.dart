@@ -51,6 +51,39 @@ class NativeImpl implements Native {
         argNames: [],
       );
 
+  Stream<Uint8List> createStream({dynamic hint}) {
+    return _platform.executeStream(FlutterRustBridgeTask(
+      callFfi: (port_) => _platform.inner.wire_create_stream(port_),
+      parseSuccessData: _wire2api_uint_8_list,
+      constMeta: kCreateStreamConstMeta,
+      argValues: [],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta get kCreateStreamConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "create_stream",
+        argNames: [],
+      );
+
+  Future<void> processData({required Uint8List data, dynamic hint}) {
+    var arg0 = _platform.api2wire_uint_8_list(data);
+    return _platform.executeNormal(FlutterRustBridgeTask(
+      callFfi: (port_) => _platform.inner.wire_process_data(port_, arg0),
+      parseSuccessData: _wire2api_unit,
+      constMeta: kProcessDataConstMeta,
+      argValues: [data],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta get kProcessDataConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "process_data",
+        argNames: ["data"],
+      );
+
   void dispose() {
     _platform.dispose();
   }
@@ -67,8 +100,25 @@ class NativeImpl implements Native {
   Platform _wire2api_platform(dynamic raw) {
     return Platform.values[raw];
   }
+
+  int _wire2api_u8(dynamic raw) {
+    return raw as int;
+  }
+
+  Uint8List _wire2api_uint_8_list(dynamic raw) {
+    return raw as Uint8List;
+  }
+
+  void _wire2api_unit(dynamic raw) {
+    return;
+  }
 }
 
 // Section: api2wire
+
+@protected
+int api2wire_u8(int raw) {
+  return raw;
+}
 
 // Section: finalizer

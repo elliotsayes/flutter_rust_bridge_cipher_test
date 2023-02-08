@@ -41,6 +41,29 @@ fn wire_rust_release_mode_impl(port_: MessagePort) {
         move || move |task_callback| Ok(rust_release_mode()),
     )
 }
+fn wire_create_stream_impl(port_: MessagePort) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "create_stream",
+            port: Some(port_),
+            mode: FfiCallMode::Stream,
+        },
+        move || move |task_callback| create_stream(task_callback.stream_sink()),
+    )
+}
+fn wire_process_data_impl(port_: MessagePort, data: impl Wire2Api<Vec<u8>> + UnwindSafe) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "process_data",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_data = data.wire2api();
+            move |task_callback| process_data(api_data)
+        },
+    )
+}
 // Section: wrapper structs
 
 // Section: static checks
@@ -63,6 +86,12 @@ where
         (!self.is_null()).then(|| self.wire2api())
     }
 }
+impl Wire2Api<u8> for u8 {
+    fn wire2api(self) -> u8 {
+        self
+    }
+}
+
 // Section: impl IntoDart
 
 impl support::IntoDart for Platform {
@@ -80,6 +109,7 @@ impl support::IntoDart for Platform {
         .into_dart()
     }
 }
+
 // Section: executor
 
 support::lazy_static! {

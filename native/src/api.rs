@@ -2,6 +2,8 @@
 // When adding new code to your project, note that only items used
 // here will be transformed to their Dart equivalents.
 
+use flutter_rust_bridge::StreamSink;
+
 // A plain enum without any fields. This is similar to Dart- or C-style enums.
 // flutter_rust_bridge is capable of generating code for enums with fields
 // (@freezed classes in Dart and tagged unions in C).
@@ -56,4 +58,46 @@ pub fn platform() -> Platform {
 // and they are automatically converted to camelCase on the Dart side.
 pub fn rust_release_mode() -> bool {
     cfg!(not(debug_assertions))
+}
+
+static mut STREAM_SINK: Option<StreamSink<Vec<u8>>> = None;
+
+pub fn create_stream(stream: StreamSink<Vec<u8>>) -> anyhow::Result<()> {
+    unsafe {
+        STREAM_SINK = Some(stream);
+    }
+    Ok(())
+}
+
+pub fn process_data(data: Vec<u8>) -> anyhow::Result<()> {
+    unsafe {
+        match STREAM_SINK.as_ref() {
+            Some(stream) => {
+                // just return it back to Dart
+                stream.add(data);
+                Ok(())
+            }
+            None => {
+                Err(anyhow::anyhow!("Stream not initialized"))
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use flutter_rust_bridge::{rust2dart::Rust2Dart};
+
+    #[test]
+    fn test_create_process() {
+        unsafe { assert!(STREAM_SINK.is_none()); }
+        
+        let x_res = create_stream(StreamSink::new(Rust2Dart::new(12)));
+        unsafe { assert!(STREAM_SINK.is_some()); }
+        assert!(x_res.is_ok());
+
+        let y_res = process_data(vec![1,2,3]);
+        assert!(y_res.is_ok());
+    }
 }

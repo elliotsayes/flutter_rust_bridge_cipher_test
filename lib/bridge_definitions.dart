@@ -17,6 +17,14 @@ abstract class Native {
   Future<bool> rustReleaseMode({dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kRustReleaseModeConstMeta;
+
+  Stream<Uint8List> createStream({dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kCreateStreamConstMeta;
+
+  Future<void> processData({required Uint8List data, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kProcessDataConstMeta;
 }
 
 enum Platform {
