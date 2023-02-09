@@ -62,7 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     platform = api.platform();
     isRelease = api.rustReleaseMode();
-    createStream = Future.sync(() => api.createStream(key: Uint8List(32), iv: Uint8List(7), chunkSize: 1024*1024));
+    createStream = Future.sync(() => api.createStream(key: Uint8List(32), iv: Uint8List(19), chunkSize: 1024*1024));
   }
 
   @override
