@@ -2,11 +2,12 @@
 // When adding new code to your project, note that only items used
 // here will be transformed to their Dart equivalents.
 
-use flutter_rust_bridge::StreamSink;
+use flutter_rust_bridge::{StreamSink};
+// use flutter_rust_bridge::support::lazy_static;
 
 use aes_gcm::{
-    aead::stream::{self, Encryptor, EncryptorBE32, NonceSize, Nonce},
-    Aes256Gcm, KeyInit, AesGcm
+    aead::{stream::{self, Encryptor, EncryptorBE32, NonceSize, Nonce, StreamBE32}, generic_array::{GenericArray, ArrayLength}, consts::{U120, U2, U32, U256, U7, U160, B1, B0}},
+    Aes256Gcm, KeyInit, AesGcm, aes::{cipher::typenum::{UInt, UTerm}, Aes256}
 };
 
 // A plain enum without any fields. This is similar to Dart- or C-style enums.
@@ -69,7 +70,7 @@ struct EncryptionState {
     // key: Vec<u8>,
     // iv: Vec<u8>,
     chunk_size: u32,
-    buffer: Vec<u8>,
+    // buffer: Vec<u8>,
     // aead: AesGcm<Aes256Gcm, U12>,
     stream_encryptor: EncryptorBE32<Aes256Gcm>,
     sink_stream: StreamSink<Vec<u8>>,
@@ -77,39 +78,43 @@ struct EncryptionState {
 
 static mut ENCRYPTION_STATE : Option<EncryptionState> = None;
 
-pub fn create_stream(key: Vec<u8>, iv: Vec<u8>, chunk_size: u32, sink_stream: StreamSink<Vec<u8>>) -> anyhow::Result<()> {
-    let aead = Aes256Gcm::new_from_slice(&key).unwrap();
+const KEY_LENGTH: usize = 32;
+const IV_LENGTH: usize = 7; // 5 bytes are taken by the counter
+
+pub fn create_stream(key: Vec<u8>, iv: Vec<u8>, chunk_size: u32, sink_stream: StreamSink<Vec<u8>>) -> () {
+    let key_slice: &[u8; KEY_LENGTH] = key[0..KEY_LENGTH].try_into().unwrap();
+    let iv_slice: &[u8; IV_LENGTH] = iv[0..IV_LENGTH].try_into().unwrap();
     
-    let iv_slice = iv.as_slice();
-    let stream_encryptor = stream::EncryptorBE32::from_aead(aead, iv_slice.into());
+    let aead = Aes256Gcm::new(key_slice.into());
+    // let nonce = GenericArray::from_slice(iv_slice);
+    let stream_encryptor = stream::EncryptorBE32::from_aead(aead, iv_slice.try_into().unwrap());
 
     unsafe {
         ENCRYPTION_STATE = Some(EncryptionState {
             // key,
             // iv,
             chunk_size,
-            buffer: vec![0; 8],
+            // buffer: vec![0; chunk_size as usize],
             // aead,
             stream_encryptor,
             sink_stream,
         });
     }
 
-    Ok(())
+    ()
 }
 
-pub fn process_data(data: Vec<u8>) -> anyhow::Result<()> {
+pub fn process_data(data: Vec<u8>) -> () {
     let data_len = data.len() as u32;
+
     unsafe {
         match &mut ENCRYPTION_STATE {
             Some(es) => {
                 if data_len == 0 {
                     es.sink_stream.close();
-                }
-                if data_len == es.chunk_size {
+                } else if data_len == es.chunk_size {
                     let encrypted_buffer = es.stream_encryptor
-                        .encrypt_next(es.buffer.as_slice())
-                        .map_err(|err| anyhow::anyhow!("Encrypting large file: {}", err))?;
+                        .encrypt_next(data.as_slice()).unwrap();
                     es.sink_stream.add(encrypted_buffer);
                 } else {
                     // let encrypted_buffer = es.stream_encryptor
@@ -117,14 +122,37 @@ pub fn process_data(data: Vec<u8>) -> anyhow::Result<()> {
                     //     .map_err(|err| anyhow::anyhow!("Encrypting large file: {}", err))?;
                     // es.sink_stream.add(encrypted_buffer);
                 }
-                Ok(())
             }
             None => {
-                Err(anyhow::anyhow!("Stream not initialized"))
+                panic!("Stream not initialized");
             }
         }
     }
+
+    ()
 }
+
+pub fn process_data_loop(times: u32) -> () {
+    unsafe {
+        match &mut ENCRYPTION_STATE {
+            Some(es) => {
+                let data = vec![0; es.chunk_size as usize];
+                let data_slice = data.as_slice();
+                for _ in 0..times {
+                    let encrypted_buffer = es.stream_encryptor
+                        .encrypt_next(data_slice).unwrap();
+                    es.sink_stream.add(encrypted_buffer);
+                }
+            }
+            None => {
+                panic!("Stream not initialized");
+            }
+        }
+    }
+
+    ()
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -135,11 +163,11 @@ mod tests {
     fn test_create_process() {
         unsafe { assert!(ENCRYPTION_STATE.is_none()); }
         
-        let x_res = create_stream(vec![0; 32], vec![0; 7], 1024, StreamSink::new(Rust2Dart::new(12)));
+        let x_res = create_stream(vec![0; KEY_LENGTH], vec![0; IV_LENGTH], 1024 * 1024, StreamSink::new(Rust2Dart::new(12)));
         unsafe { assert!(ENCRYPTION_STATE.is_some()); }
-        assert!(x_res.is_ok());
+        assert_eq!(x_res, ());
 
         let y_res = process_data(vec![1,2,3]);
-        assert!(y_res.is_ok());
+        assert_eq!(y_res, ());
     }
 }

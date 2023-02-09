@@ -58,7 +58,12 @@ fn wire_create_stream_impl(
             let api_iv = iv.wire2api();
             let api_chunk_size = chunk_size.wire2api();
             move |task_callback| {
-                create_stream(api_key, api_iv, api_chunk_size, task_callback.stream_sink())
+                Ok(create_stream(
+                    api_key,
+                    api_iv,
+                    api_chunk_size,
+                    task_callback.stream_sink(),
+                ))
             }
         },
     )
@@ -72,7 +77,20 @@ fn wire_process_data_impl(port_: MessagePort, data: impl Wire2Api<Vec<u8>> + Unw
         },
         move || {
             let api_data = data.wire2api();
-            move |task_callback| process_data(api_data)
+            move |task_callback| Ok(process_data(api_data))
+        },
+    )
+}
+fn wire_process_data_loop_impl(port_: MessagePort, times: impl Wire2Api<u32> + UnwindSafe) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "process_data_loop",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_times = times.wire2api();
+            move |task_callback| Ok(process_data_loop(api_times))
         },
     )
 }

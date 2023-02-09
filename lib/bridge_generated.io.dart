@@ -192,6 +192,22 @@ class NativeWire implements FlutterRustBridgeWireBase {
   late final _wire_process_data = _wire_process_dataPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
+  void wire_process_data_loop(
+    int port_,
+    int times,
+  ) {
+    return _wire_process_data_loop(
+      port_,
+      times,
+    );
+  }
+
+  late final _wire_process_data_loopPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Uint32)>>(
+          'wire_process_data_loop');
+  late final _wire_process_data_loop =
+      _wire_process_data_loopPtr.asFunction<void Function(int, int)>();
+
   ffi.Pointer<wire_uint_8_list> new_uint_8_list_0(
     int len,
   ) {

@@ -92,6 +92,23 @@ class NativeImpl implements Native {
         argNames: ["data"],
       );
 
+  Future<void> processDataLoop({required int times, dynamic hint}) {
+    var arg0 = api2wire_u32(times);
+    return _platform.executeNormal(FlutterRustBridgeTask(
+      callFfi: (port_) => _platform.inner.wire_process_data_loop(port_, arg0),
+      parseSuccessData: _wire2api_unit,
+      constMeta: kProcessDataLoopConstMeta,
+      argValues: [times],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta get kProcessDataLoopConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "process_data_loop",
+        argNames: ["times"],
+      );
+
   void dispose() {
     _platform.dispose();
   }

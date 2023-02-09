@@ -26,6 +26,11 @@ pub extern "C" fn wire_process_data(port_: i64, data: *mut wire_uint_8_list) {
     wire_process_data_impl(port_, data)
 }
 
+#[no_mangle]
+pub extern "C" fn wire_process_data_loop(port_: i64, times: u32) {
+    wire_process_data_loop_impl(port_, times)
+}
+
 // Section: allocate functions
 
 #[no_mangle]

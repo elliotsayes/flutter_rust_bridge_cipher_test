@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'ffi.dart' if (dart.library.html) 'ffi_web.dart';
 
@@ -53,12 +55,14 @@ class _MyHomePageState extends State<MyHomePage> {
   // in the initState method.
   late Future<Platform> platform;
   late Future<bool> isRelease;
+  late Future<Stream<Uint8List>> createStream;
 
   @override
   void initState() {
     super.initState();
     platform = api.platform();
     isRelease = api.rustReleaseMode();
+    createStream = Future.sync(() => api.createStream(key: Uint8List(32), iv: Uint8List(7), chunkSize: 1024*1024));
   }
 
   @override
@@ -106,7 +110,7 @@ class _MyHomePageState extends State<MyHomePage> {
             FutureBuilder<List<dynamic>>(
               // We await two unrelated futures here, so the type has to be
               // List<dynamic>.
-              future: Future.wait([platform, isRelease]),
+              future: Future.wait([platform, isRelease, createStream]),
               builder: (context, snap) {
                 final style = Theme.of(context).textTheme.headline4;
                 if (snap.error != null) {
@@ -137,9 +141,58 @@ class _MyHomePageState extends State<MyHomePage> {
                       Platform.Wasm: 'the Web',
                     }[platform] ??
                     'Unknown OS';
-                return Text('$text ($release)', style: style);
+                return Column(children: [
+                  Text('$text ($release)', style: style),
+                  Text('Stream created (${data[2]})', style: style),
+                  StreamBuilder<Uint8List>(
+                    builder: (context, snap) {
+                      if (snap.hasError) {
+                        debugPrint(snap.error.toString());
+                        return Tooltip(
+                          message: snap.error.toString(),
+                          child: Text('Unknown OS', style: style),
+                        );
+                      }
+                      if (snap.hasData) {
+                        return Text('Stream data (${snap.data!.length})', style: style);
+                      }
+                      return const CircularProgressIndicator();
+                    },
+                    stream: data[2],
+                  ),
+                ],);
               },
-            )
+            ),
+            MaterialButton(
+              child: Text("run 100 times"),
+              onPressed: () async {
+                final size = 1024 * 1024;
+                final data = Uint8List(size);
+
+                final start = DateTime.now();
+                print(start);
+                for (var i = 0; i < 100; i++) {
+                  print(i);
+                  await api.processData(data: data);
+                }
+                final end = DateTime.now();
+                print(end);
+                print(end.difference(start).inMilliseconds);
+              },
+            ),
+            MaterialButton(
+              child: Text("run loop"),
+              onPressed: () async {
+                final start = DateTime.now();
+                print(start);
+
+                await api.processDataLoop(times: 10);
+
+                final end = DateTime.now();
+                print(end);
+                print(end.difference(start).inMilliseconds);
+              },
+            ),
           ],
         ),
       ),

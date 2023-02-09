@@ -29,6 +29,10 @@ abstract class Native {
   Future<void> processData({required Uint8List data, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kProcessDataConstMeta;
+
+  Future<void> processDataLoop({required int times, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kProcessDataLoopConstMeta;
 }
 
 enum Platform {

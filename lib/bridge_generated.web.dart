@@ -45,6 +45,9 @@ class NativeWasmModule implements WasmModule {
 
   external dynamic /* void */ wire_process_data(
       NativePortType port_, Uint8List data);
+
+  external dynamic /* void */ wire_process_data_loop(
+      NativePortType port_, int times);
 }
 
 // Section: WASM wire connector
@@ -64,4 +67,7 @@ class NativeWire extends FlutterRustBridgeWasmWireBase<NativeWasmModule> {
 
   void wire_process_data(NativePortType port_, Uint8List data) =>
       wasmModule.wire_process_data(port_, data);
+
+  void wire_process_data_loop(NativePortType port_, int times) =>
+      wasmModule.wire_process_data_loop(port_, times);
 }

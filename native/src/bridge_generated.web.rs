@@ -21,6 +21,11 @@ pub fn wire_process_data(port_: MessagePort, data: Box<[u8]>) {
     wire_process_data_impl(port_, data)
 }
 
+#[wasm_bindgen]
+pub fn wire_process_data_loop(port_: MessagePort, times: u32) {
+    wire_process_data_loop_impl(port_, times)
+}
+
 // Section: allocate functions
 
 // Section: related functions
