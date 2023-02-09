@@ -71,7 +71,7 @@ struct EncryptionState {
     chunk_size: u32,
     buffer: Vec<u8>,
     // aead: AesGcm<Aes256Gcm, U12>,
-    encryption_stream: EncryptorBE32<Aes256Gcm>,
+    stream_encryptor: EncryptorBE32<Aes256Gcm>,
     sink_stream: StreamSink<Vec<u8>>,
 }
 
@@ -81,7 +81,7 @@ pub fn create_stream(key: Vec<u8>, iv: Vec<u8>, chunk_size: u32, sink_stream: St
     let aead = Aes256Gcm::new_from_slice(&key).unwrap();
     
     let iv_slice = iv.as_slice();
-    let encryption_stream = stream::EncryptorBE32::from_aead(aead, iv_slice.into());
+    let stream_encryptor = stream::EncryptorBE32::from_aead(aead, iv_slice.into());
 
     unsafe {
         ENCRYPTION_STATE = Some(EncryptionState {
@@ -90,7 +90,7 @@ pub fn create_stream(key: Vec<u8>, iv: Vec<u8>, chunk_size: u32, sink_stream: St
             chunk_size,
             buffer: vec![0; 8],
             // aead,
-            encryption_stream,
+            stream_encryptor,
             sink_stream,
         });
     }
@@ -99,20 +99,23 @@ pub fn create_stream(key: Vec<u8>, iv: Vec<u8>, chunk_size: u32, sink_stream: St
 }
 
 pub fn process_data(data: Vec<u8>) -> anyhow::Result<()> {
+    let data_len = data.len() as u32;
     unsafe {
-        match ENCRYPTION_STATE.as_mut() {
+        match &mut ENCRYPTION_STATE {
             Some(es) => {
-                if data.len() as u32 == es.chunk_size {
-                    let encrypted_buffer = es.encryption_stream
+                if data_len == 0 {
+                    es.sink_stream.close();
+                }
+                if data_len == es.chunk_size {
+                    let encrypted_buffer = es.stream_encryptor
                         .encrypt_next(es.buffer.as_slice())
                         .map_err(|err| anyhow::anyhow!("Encrypting large file: {}", err))?;
                     es.sink_stream.add(encrypted_buffer);
                 } else {
-                    // let encrypted_buffer = es.encryption_stream
+                    // let encrypted_buffer = es.stream_encryptor
                     //     .encrypt_last(es.buffer.as_slice())
                     //     .map_err(|err| anyhow::anyhow!("Encrypting large file: {}", err))?;
                     // es.sink_stream.add(encrypted_buffer);
-                    es.sink_stream.close();
                 }
                 Ok(())
             }
